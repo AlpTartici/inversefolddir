@@ -1,0 +1,43 @@
+# Pre-commit hooks for Inverse FoldDir.
+#
+#   pip install pre-commit && pre-commit install
+#   pre-commit run --all-files
+#
+# Deliberately small: every hook here runs from a clean checkout with no extra
+# setup. Hooks needing a local baseline file or a repository-specific scanner
+# script are not included -- a config that fails on its first run just gets
+# uninstalled.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      # Model weights are distributed through Hugging Face, not git.
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: destroyed-symlinks
+      - id: check-ast
+      - id: debug-statements
+      - id: check-json
+      - id: check-yaml
+      - id: detect-private-key
+
+  # Secret scanning. Catching a credential before it reaches a public remote is
+  # the failure this repository most needs to avoid.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: ['-c', '.bandit']
+
+default_language_version:
+  python: python3

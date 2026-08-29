@@ -1,0 +1,58 @@
+# --- Generated at run time ---
+output/
+results/
+logs/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# --- Model weights ---
+# Distributed through Hugging Face, not git. Fetch with:
+#   python scripts/download_checkpoints.py
+ckpts/*.pt
+
+# --- Datasets ---
+# Bulk contents are distributed through Hugging Face, not git. Fetch with:
+#   ./datasets/download_data.sh
+# The small index files and the download helper are tracked (see the negations).
+datasets/*
+!datasets/*.sh
+!datasets/*.json
+!datasets/*.txt
+!datasets/*.csv
+!datasets/*.pkl
+!datasets/cath-4.2/
+datasets/cath-4.2/*
+!datasets/cath-4.2/chain_set_splits.json
+# Fetched by datasets/download_data.sh, which verifies their checksums.
+datasets/cath-4.2/chain_set_map_with_b_factors_dssp.pkl
+datasets/cath-4.2/val_entries_with_less_than_300_continuous_coords.pkl
+
+# RBF lookup tables are regenerated on first use by
+# rbf_cache/rbf_lookup_manager.py (the 2.0-350.0 table is ~43 MB). Keep the
+# manager source, ignore the tables.
+rbf_cache/*.npy
+rbf_cache/*.json
+rbf_cache/*.lock
+
+# Test fixtures that are downloaded on demand, not source.
+tests/fixtures/*.cif
+tests/fixtures/3ogo.pdb
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# --- Job scheduler leftovers ---
+slurm-*.out
+
+# --- OS / editor / agent ---
+.DS_Store
+*.swp
+.claude/
+CLAUDE.md

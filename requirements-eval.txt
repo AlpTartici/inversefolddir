@@ -1,0 +1,25 @@
+# Inverse FoldDir -- optional dependencies for the structural evaluation pipeline.
+#
+#   pip install -r requirements-eval.txt
+#
+# NOT needed to design sequences. Install these only if you want to run
+# eval/evaluation_pipeline.py, which refolds designs and scores them against the
+# input backbone. Designing works with requirements.txt alone.
+#
+# These are separated out because they are heavier and less portable than the
+# design dependencies: transformers pulls a large stack, and parasail is a
+# compiled extension without wheels for every platform.
+
+# TM-score, RMSD, and structural superposition.
+tmtools>=0.2
+
+# ESMFold, for refolding designs to check self-consistency.
+transformers>=4.30
+
+# Fast pairwise sequence alignment, used to map DSSP strings between a
+# predicted and a reference structure.
+parasail>=1.3
+
+# NOTE: DSSP itself is an external binary, not a Python package. Install it
+# separately (`conda install -c salilab dssp`, or your distribution's `dssp` /
+# `mkdssp` package) if you want secondary-structure comparison.

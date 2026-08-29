@@ -1,0 +1,21 @@
+# Extras for the analysis notebooks. Not needed to design sequences.
+#
+#     pip install -r requirements-notebooks.txt
+#
+# Kept separate from requirements.txt because matplotlib depends on pillow,
+# which compiles from source when no prebuilt wheel matches your Python
+# version. pip installs atomically, so a pillow build failure would otherwise
+# block the core packages and leave you unable to run anything at all.
+#
+# If pillow fails here, either use a Python version with prebuilt wheels
+# (3.9-3.12 are well covered) or install the system image libraries:
+#     Debian/Ubuntu : sudo apt-get install libjpeg-dev zlib1g-dev
+#     macOS         : brew install jpeg zlib
+# Sequence design is unaffected either way.
+
+-r requirements.txt
+
+matplotlib>=3.4
+jupyter>=1.0
+jupyterlab>=3.0
+ipykernel>=6.0

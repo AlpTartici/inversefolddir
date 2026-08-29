@@ -1,0 +1,57 @@
+# Inverse FoldDir -- runtime dependencies for sequence design.
+#
+# Deliberately unpinned except where a lower bound matters, so this installs
+# on Linux, macOS (Intel and Apple Silicon), and Windows, on CPU or GPU.
+#
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu   # or a CUDA index
+#   pip install -r requirements.txt
+#
+# PyTorch is intentionally NOT listed here: the correct wheel depends on your
+# OS and GPU driver, so install it first from https://pytorch.org/get-started.
+# See docs/INSTALL.md.
+#
+# Any PyTorch from 1.13 through 2.x works. Verified on 1.13.1+cu117 and
+# 2.6.0+cpu. Checkpoints are loaded with weights_only=False, since they carry
+# training metadata alongside the weights, so PyTorch 2.6's stricter default
+# does not break loading.
+
+# Graph neural network layers. Pure Python, installs everywhere.
+torch-geometric>=2.3
+
+# Structure parsing (PDB and mmCIF).
+biopython>=1.79
+
+# Numerics and tables.
+numpy>=1.21
+scipy>=1.7
+pandas>=1.3
+
+# Config files and progress output.
+PyYAML>=5.4
+tqdm>=4.60
+
+# Structure downloads from RCSB.
+requests>=2.25
+
+# NOTE: matplotlib is deliberately NOT listed. It pulls in pillow, which
+# compiles from source when no wheel matches your Python version and fails
+# without system image libraries -- and because pip installs atomically, that
+# one failure blocks numpy, torch-geometric, and everything else. Designing
+# sequences needs no plotting. Install it separately if you want the notebook
+# figures:
+#     pip install -r requirements-notebooks.txt
+
+# ---------------------------------------------------------------------------
+# NOT required, despite appearing in older environment files:
+#
+#   torch-scatter, torch-cluster, torch-sparse, torch-spline-conv
+#       Compiled extensions without wheels for every platform. torch-geometric
+#       falls back to pure-PyTorch implementations, and the one place this
+#       codebase used torch-scatter now has a built-in fallback. Install them
+#       only if you want the extra speed:
+#           pip install torch-scatter torch-cluster \
+#               -f https://data.pyg.org/whl/torch-$(python -c 'import torch;print(torch.__version__)').html
+#
+#   wandb         training-time experiment logging only
+#   fair-esm      only for the ESMFold refolding evaluation, not for design
+# ---------------------------------------------------------------------------
