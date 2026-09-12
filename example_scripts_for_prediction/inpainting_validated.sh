@@ -8,6 +8,12 @@
 set -e  # Exit on any error
 set -u  # Exit on undefined variable
 
+# Resolve the repository root from this script's own location, so the paths
+# below work no matter which directory the script is invoked from. The working
+# directory is left alone, so a relative output directory still resolves
+# relative to wherever you ran this.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 # Configuration
 PDB_INPUT="${1:-1fcd.C}"                    # PDB ID or file path (default: 1abc)
 MASK_POSITIONS="${2:-E42,G16}"        # Positions with validation (default: D45,Y67,K89)
@@ -45,15 +51,15 @@ conda activate inv_fold
 mkdir -p "$OUTPUT_DIR"
 
 # Run inpainting with validation
-python ../training/inpainting.py \
+python "$REPO_ROOT"/training/inpainting.py \
     --pdb-id "$PDB_INPUT" \
     --mask-positions "$MASK_POSITIONS" \
     --steps "$STEPS" \
     --flow_temp "$FLOW_TEMP" \
     --output-dir "$OUTPUT_DIR" \
-    --model "../ckpts/inverse_folddir_model.pt" \
-    --split_json ../datasets/cath-4.2/chain_set_splits.json \
-    --map_pkl ../datasets/cath-4.2/chain_set_map_with_b_factors_dssp.pkl \
+    --model "$REPO_ROOT/ckpts/inverse_folddir_model.pt" \
+    --split_json "$REPO_ROOT"/datasets/cath-4.2/chain_set_splits.json \
+    --map_pkl "$REPO_ROOT"/datasets/cath-4.2/chain_set_map_with_b_factors_dssp.pkl \
     --detailed_json \
     --verbose
 

@@ -4439,8 +4439,14 @@ CSV File Format (for --list_csv):
                         help='Single chain ID to inpaint when using --context-chains (e.g. "G"). '
                              'If omitted, all non-context chains in the PDB are treated as target (usually not what you want).')
 
-    # Required arguments
-    parser.add_argument('--model', type=str, default = "../ckpts/inverse_folddir_model.pt", help='Path to trained model checkpoint')
+    # Required arguments.
+    # Resolved through paths.py rather than a relative "../ckpts/..." literal,
+    # which was only correct when this script was run from inside training/.
+    # It now points at the repository's ckpts/ from any working directory, and
+    # honours IFD_CKPT_DIR.
+    from paths import ckpt_path
+    parser.add_argument('--model', type=str, default=ckpt_path('inverse_folddir_model.pt'),
+                        help='Path to trained model checkpoint')
 
     # Ensemble arguments
     parser.add_argument('--ensemble_size', type=int, default=1,

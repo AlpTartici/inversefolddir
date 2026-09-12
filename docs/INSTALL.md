@@ -38,11 +38,15 @@ python check_install.py
 pip install -r requirements-notebooks.txt
 ```
 
-This is kept separate on purpose. It pulls in matplotlib, which depends on
-`pillow`, which compiles from source when no prebuilt wheel matches your Python
-version. Since pip installs atomically, bundling it would let a pillow build
-failure block numpy and torch-geometric and leave you unable to run anything.
-Keeping it separate means a plotting problem never blocks sequence design.
+This installs Jupyter and nothing heavier. It is kept separate because pip
+installs atomically, so bundling it into `requirements.txt` would let one
+failure here block numpy and torch-geometric and leave you unable to run
+anything at all.
+
+Note that it does not install matplotlib. The quickstart notebook prints tables
+and sequences rather than figures, so it does not need plotting, and matplotlib
+pulls in `pillow`, which compiles from source when no prebuilt wheel matches
+your Python version. If your own notebooks need it, `pip install matplotlib`.
 
 **Why PyTorch separately?** The right build depends on your operating system and
 GPU driver, and a wrong guess is the most common installation failure. Choosing
@@ -117,7 +121,7 @@ on GPU. Everything else is identical.
 | File | What it adds | Needed for |
 |---|---|---|
 | `requirements.txt` | Core | Designing sequences. This is all most people need. |
-| `requirements-notebooks.txt` | matplotlib, Jupyter | `notebooks/quickstart.ipynb` and its plots |
+| `requirements-notebooks.txt` | Jupyter | Running `notebooks/quickstart.ipynb` |
 | `requirements-eval.txt` | tmtools, transformers, parasail | `eval/evaluation_pipeline.py` -- refolding designs and scoring them against the input backbone |
 
 Designing works with `requirements.txt` alone; the other two are opt-in because
@@ -183,7 +187,7 @@ If you want ID lookup, place `chain_set_splits.json` and
 | `CUDA error: no kernel image` | PyTorch build does not match your GPU | Reinstall PyTorch with the right CUDA version, or use the CPU build |
 | `invalid load key, 'v'` | A downloaded file is a Git LFS pointer | Re-download it |
 | `Dependency "OpenBLAS" not found` while installing SciPy | glibc too old for current wheels, so pip is building from source | `pip install --only-binary=:all: -r requirements.txt` — see Linux / HPC clusters above |
-| `Failed building wheel for pillow` | matplotlib dependency compiling from source | Only affects notebook plots. Skip `requirements-notebooks.txt`, or install `libjpeg-dev zlib1g-dev` (Linux) / `brew install jpeg zlib` (macOS) |
+| `Failed building wheel for pillow` | matplotlib dependency compiling from source | Nothing here needs matplotlib, so skip it, or install `libjpeg-dev zlib1g-dev` (Linux) / `brew install jpeg zlib` (macOS) |
 | `Weights only load failed` / `WeightsUnpickler error` | PyTorch 2.6+ refuses to unpickle checkpoint metadata by default | Fixed in this codebase. If you see it, you are on an older copy — `git pull` |
 | `killed` / out of memory | Protein too large | Add `--steps 10`, or use a machine with more RAM |
 

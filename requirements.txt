@@ -36,10 +36,10 @@ requests>=2.25
 # NOTE: matplotlib is deliberately NOT listed. It pulls in pillow, which
 # compiles from source when no wheel matches your Python version and fails
 # without system image libraries -- and because pip installs atomically, that
-# one failure blocks numpy, torch-geometric, and everything else. Designing
-# sequences needs no plotting. Install it separately if you want the notebook
-# figures:
-#     pip install -r requirements-notebooks.txt
+# one failure blocks numpy, torch-geometric, and everything else. Nothing
+# shipped here plots, including the quickstart notebook, so install it
+# separately if your own scripts need it:
+#     pip install matplotlib
 
 # ---------------------------------------------------------------------------
 # NOT required, despite appearing in older environment files:

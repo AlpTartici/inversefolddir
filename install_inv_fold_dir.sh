@@ -12,6 +12,7 @@
 #   bash install_inv_fold_dir.sh            # auto-detect GPU vs CPU
 #   bash install_inv_fold_dir.sh --cpu      # force CPU-only build
 #   bash install_inv_fold_dir.sh --cuda 121 # pick a specific CUDA version
+#   bash install_inv_fold_dir.sh --name foo # use a different environment name
 
 set -e
 
@@ -25,7 +26,9 @@ while [[ $# -gt 0 ]]; do
         --cuda)  CUDA_VERSION="$2"; shift 2 ;;
         --name)  ENV_NAME="$2"; shift 2 ;;
         -h|--help)
-            grep '^#' "$0" | sed 's/^# \?//' | head -14
+            # tail -n +2 drops the shebang, which grep '^#' would otherwise
+            # print as a stray "!/bin/bash" line.
+            grep '^#' "$0" | tail -n +2 | sed 's/^# \?//' | head -14
             exit 0 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac

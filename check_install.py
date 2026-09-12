@@ -35,7 +35,6 @@ REQUIRED = [
 OPTIONAL = [
     ("torch_scatter", "torch-scatter", "faster graph ops; a built-in fallback is used without it"),
     ("torch_cluster", "torch-cluster", "only needed for some training utilities"),
-    ("matplotlib", "matplotlib", "notebook plots; pip install -r requirements-notebooks.txt"),
     ("jupyter", "Jupyter", "notebooks/quickstart.ipynb; pip install -r requirements-notebooks.txt"),
 ]
 

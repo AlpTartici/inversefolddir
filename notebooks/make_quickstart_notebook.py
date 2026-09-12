@@ -18,291 +18,393 @@ import json
 from pathlib import Path
 
 
+def source_lines(text):
+    """
+    Split a cell body into nbformat "source" lines.
+
+    Every line keeps its trailing newline except the last one. Without the
+    newlines, viewers join the lines into a single run-on line, which breaks
+    markdown rendering and makes code cells syntactically invalid.
+    """
+    lines = text.strip("\n").split("\n")
+    return [line + "\n" for line in lines[:-1]] + [lines[-1]]
+
+
 def markdown(text):
-    return {"cell_type": "markdown", "metadata": {},
-            "source": text.strip().split("\n")}
+    return {"cell_type": "markdown", "metadata": {}, "source": source_lines(text)}
 
 
 def code(text):
     return {"cell_type": "code", "execution_count": None, "metadata": {},
-            "outputs": [], "source": text.strip().split("\n")}
+            "outputs": [], "source": source_lines(text)}
 
 
 CELLS = [
     markdown("""
-# Inverse FoldDir — Quickstart
+# Inverse FoldDir quickstart
 
-**Design protein sequences from a backbone structure.**
+Give this notebook a protein backbone. It gives you back amino acid sequences
+predicted to fold into that backbone.
 
-This notebook takes you from a structure to sequences you can order. You do not
-need to know Python — run each cell in order with `Shift + Enter` and change
-only the settings marked **EDIT THIS**.
+## How to use it
 
-### Before you start
+Run the cells in order from the top. `Shift + Enter` runs the selected cell and
+moves to the next one.
 
-You need the `inv_fold` environment installed and selected as this notebook's
-kernel. If you have not installed it yet, see `docs/GETTING_STARTED.md` Step 2.
+There is **one cell you need to edit**: the settings cell in step 2. Every
+other cell runs as written.
 
-### What you will do
+## What you need before you start
 
-1. Check the setup works
-2. Point at your structure
-3. Generate designs
-4. Read and export the results
+- The `inv_fold` environment installed, and selected as this notebook's kernel.
+  To select it: `Kernel` menu, then `Change kernel`, then `inv_fold`.
+  Installation is covered in `docs/INSTALL.md`.
+- The model weights. They are distributed separately from the code, and one
+  command fetches them. Run this in a terminal at the repository root:
+
+```
+python scripts/download_checkpoints.py
+```
+
+Step 1 checks both of these and tells you if something is missing.
 """),
 
     markdown("""
----
-## 1. Check the setup
+## Step 1 — Check the setup
 
-Run this cell. It confirms the environment is working and tells you whether a
-GPU is available.
+Run the cell below. It prints a short report of what it found. If anything says
+`not found`, fix that before going on.
 """),
 
     code("""
-import sys, os
+import os
+import sys
 from pathlib import Path
 
-# Work from the repository root, regardless of where Jupyter was launched.
+# Run from the repository root, whichever folder Jupyter happened to start in.
 if Path.cwd().name == "notebooks":
     os.chdir("..")
-sys.path.insert(0, str(Path.cwd()))
+ROOT = Path.cwd()
+sys.path.insert(0, str(ROOT))
+
+
+def report(label, value, *notes):
+    \"\"\"Print one aligned 'label  value' line, plus any indented notes.\"\"\"
+    print(f"{label:<16}{value}")
+    for note in notes:
+        print(f"{'':<16}{note}")
+
+
+report("Repository", ROOT)
+
+# paths.py is the single place that resolves where data and checkpoints live,
+# so setting IFD_CKPT_DIR or IFD_DATA_DIR works here exactly as it does on the
+# command line.
+from paths import CATH_DIR, CHAIN_SET_MAP_NAME, ckpt_dir, data_dir
 
 try:
     import torch
-    gpu = torch.cuda.is_available()
-    print("Environment OK")
-    print(f"GPU available: {gpu}" + ("" if gpu else "  (CPU works too, just slower)"))
 except ImportError:
-    print("PROBLEM: the inv_fold environment is not active.")
-    print("Fix: select the 'inv_fold' kernel (Kernel > Change Kernel), then re-run.")
-
-print(f"Working directory: {Path.cwd()}")
-"""),
-
-    markdown("""
-### Find the model weights
-
-The trained model is a separate ~38 MB file in `ckpts/`. This cell looks for it.
-"""),
-
-    code("""
-checkpoints = sorted(Path("ckpts").glob("*.pt")) if Path("ckpts").exists() else []
-usable = [c for c in checkpoints if c.stat().st_size > 1_000_000]
-
-if usable:
-    MODEL = str(usable[0])
-    print(f"Using model: {MODEL}")
-    if len(usable) > 1:
-        print("Other available models:")
-        for c in usable[1:]:
-            print(f"   {c}")
+    report("Environment", "not ready",
+           "PyTorch could not be imported, which means the inv_fold",
+           "kernel is not active. Use Kernel > Change kernel >",
+           "inv_fold, then run this cell again.")
 else:
-    MODEL = "ckpts/inverse_folddir_model.pt"
-    print("No model weights found in ckpts/.")
-    print("Download the checkpoint from the repository releases page first.")
-    print("(Files of only a few hundred bytes are placeholders, not real weights.)")
+    report("Environment", f"ready (PyTorch {torch.__version__})")
+    if torch.cuda.is_available():
+        report("Hardware", f"GPU ({torch.cuda.get_device_name(0)})")
+    else:
+        report("Hardware", "CPU", "No GPU detected. Everything still works, just slower.")
 
-# The CATH reference dataset is optional: it is only needed to look structures
-# up by UniProt or PDB ID. Designing from a structure file does not use it.
-SPLIT_JSON = Path("datasets/cath-4.2/chain_set_splits.json")
-MAP_PKL = Path("datasets/cath-4.2/chain_set_map_with_b_factors_dssp.pkl")
+# The weights ship separately from the code. A .pt file of only a few hundred
+# bytes is a placeholder left by a failed download, not real weights.
+CKPT_DIR = ckpt_dir()
+weights = sorted(p for p in CKPT_DIR.glob("*.pt") if p.stat().st_size > 1_000_000)
 
-have_dataset = (
+if weights:
+    MODEL = str(weights[0])
+    report("Weights", Path(MODEL).name,
+           *(f"also found {other.name}" for other in weights[1:]))
+else:
+    MODEL = str(CKPT_DIR / "inverse_folddir_model.pt")
+    report("Weights", "not found",
+           f"Looked in {CKPT_DIR}",
+           "To fetch them, run this in a terminal at the repository root:",
+           "    python scripts/download_checkpoints.py",
+           "then run this cell again.")
+
+# The CATH reference dataset is optional. It is only needed to pull a structure
+# out of that dataset by UniProt or PDB ID. Designing from a structure file, or
+# from a PDB ID downloaded on the fly, does not use it.
+CATH = data_dir() / CATH_DIR
+SPLIT_JSON = CATH / "chain_set_splits.json"
+MAP_PKL = CATH / CHAIN_SET_MAP_NAME
+HAVE_DATASET = (
     SPLIT_JSON.exists()
     and MAP_PKL.exists()
     and MAP_PKL.stat().st_size > 1_000_000
 )
 
-if have_dataset:
-    print("CATH reference dataset: found (ID lookup available)")
+if HAVE_DATASET:
+    report("Reference data", "present")
 else:
-    print("CATH reference dataset: not present -- that is fine.")
-    print("  Designing from a structure file works without it.")
-    print("  It is only needed to look structures up by UniProt/PDB ID.")
+    report("Reference data", "not present",
+           "This is optional and this notebook does not need it.")
 """),
 
     markdown("""
----
-## 2. Choose your structure  <span style="color:#c00">EDIT THIS</span>
+## Step 2 — Settings
 
-Two options:
+This is the cell to edit. Each setting is explained here, and repeated as a
+comment in the cell itself.
 
-- **A PDB ID** such as `"3OGO"` — downloaded automatically, nothing to prepare.
-- **Your own file** — `.pdb` or `.cif` both work. mmCIF files are converted
-  automatically. The file must contain backbone atoms (N, CA, C).
+| Setting | What it does |
+|---|---|
+| `STRUCTURE` | The backbone to design for. Either a four-character PDB ID such as `"3OGO"`, which is downloaded for you, or a path to your own `.pdb` or `.cif` file. |
+| `RUN_NAME` | A short label for this run. Results are written to `output/RUN_NAME/`. |
+| `NUM_DESIGNS` | How many sequences to produce. Each is generated independently, so they come out different from one another. |
+| `KEEP` | Positions to leave untouched, for example `"C22,C96"`. Leave it as `""` to redesign every position. |
+| `CHEMISTRY` | Optional. Steers a position towards a kind of amino acid without pinning an exact one, for example `"34:polar"`. Leave it as `""` to skip. |
+| `SEED` | Starting point for the random number generator. The same settings and seed give you the same sequences back. |
 
-Backbones with no residue identities (de novo designs, or files whose residues
-are `UNK`) are supported — that is the intended de novo case.
+### If your file has more than one chain
+
+Only one chain is designed. If the file holds several, the longest one is
+picked and the rest are ignored, so check that the longest chain is the one you
+meant. `--target-chain` and `--context-chains` on `training/inpainting.py` let
+you choose a different chain, or keep the others as structural context.
+
+### How positions are numbered
+
+Positions count from 1 along the chain as read out of your structure file. If
+your file is missing residues, or its numbering does not start at 1, these
+numbers will not match the residue numbers written in the file. Count along the
+chain instead.
+
+Three ways to write a position in `KEEP`:
+
+- `C22` — position 22, and check that it really is a cysteine
+- `CYS22` — the same thing with the three-letter code
+- `22` — position 22, no check
+
+The first two forms are worth the extra typing. If position 22 turns out not to
+be a cysteine, the run stops immediately with an error, which is how you find a
+numbering mistake before waiting on a design rather than after.
+
+### Deciding what to keep
+
+Whatever the protein has to keep doing belongs in `KEEP`: catalytic residues,
+both halves of a disulfide, positions that sit on a binding interface.
+Positions you leave out are free to change.
+
+If the backbone carries no sequence at all (a de novo design, or a file whose
+residues are all `UNK`), leave `KEEP` empty. There is nothing there to preserve.
 """),
 
     code("""
-# ============ EDIT THIS ============
-STRUCTURE = "3OGO"          # a PDB ID, or a path like "mystructure.pdb"
-OUTPUT_NAME = "my_design"   # a name for this experiment
-# ===================================
+# ---------------------------------------------------------------------------
+# Settings. This is the only cell you need to edit.
+# ---------------------------------------------------------------------------
 
-OUTPUT_DIR = f"output/{OUTPUT_NAME}"
+# A four-character PDB ID, or a path to your own .pdb or .cif file.
+STRUCTURE = "3OGO"
 
-if len(STRUCTURE) == 4 and not STRUCTURE.lower().endswith((".pdb", ".cif")):
-    print(f"Will download PDB ID: {STRUCTURE}")
+# Label for this run. Results go to output/RUN_NAME/
+RUN_NAME = "my_design"
+
+# How many sequences to generate.
+NUM_DESIGNS = 3
+
+# Positions to leave untouched, e.g. "C22,C96,W47". Empty means redesign
+# everything.
+KEEP = ""
+
+# Optional chemistry preferences, e.g. "34:polar, 57:metal_binding". Empty
+# skips this. The cell further down lists the names you can use here.
+CHEMISTRY = ""
+
+# Change this for a different set of designs; keep it to reproduce these ones.
+SEED = 1
+
+# ---------------------------------------------------------------------------
+
+OUTPUT_DIR = f"output/{RUN_NAME}"
+"""),
+
+    markdown("""
+Run the next cell to check the settings before committing to a run. It confirms
+the structure can be found and repeats back what is about to happen.
+"""),
+
+    code("""
+looks_like_pdb_id = (
+    len(STRUCTURE) == 4 and not STRUCTURE.lower().endswith((".pdb", ".cif"))
+)
+
+if looks_like_pdb_id:
+    report("Structure", f"{STRUCTURE} (will be downloaded)")
 elif Path(STRUCTURE).exists():
     if STRUCTURE.lower().endswith((".cif", ".mmcif")):
-        print(f"Found {STRUCTURE} (mmCIF -- will be converted automatically)")
+        report("Structure", f"{STRUCTURE} (mmCIF, converted automatically)")
     else:
-        n_atoms = sum(1 for line in open(STRUCTURE) if line.startswith("ATOM"))
-        print(f"Found {STRUCTURE} with {n_atoms} atom records")
-        if n_atoms == 0:
-            print("WARNING: no ATOM records. This file will not work.")
+        with open(STRUCTURE) as handle:
+            n_atoms = sum(1 for line in handle if line.startswith("ATOM"))
+        report("Structure", f"{STRUCTURE} ({n_atoms} atom records)",
+               *([] if n_atoms else
+                 ["This file has no atom records, so it will not work."]))
 else:
-    print(f"Cannot find '{STRUCTURE}'.")
-    print("Check the path, or use a 4-character PDB ID instead.")
+    report("Structure", f"'{STRUCTURE}' not found",
+           "Check the path, or use a four-character PDB ID instead.")
 
-print(f"Results will go to: {OUTPUT_DIR}")
+report("Designs", NUM_DESIGNS)
+report("Keeping", KEEP if KEEP else "nothing, so every position is redesigned")
+if CHEMISTRY:
+    report("Chemistry", CHEMISTRY)
+report("Results in", OUTPUT_DIR)
 """),
 
     markdown("""
----
-## 3. Choose how much to redesign  <span style="color:#c00">EDIT THIS</span>
+### Names you can use in `CHEMISTRY`
 
-This is the most important decision you make.
-
-| Setting | What happens | When to use it |
-|---|---|---|
-| `FIXED = ""` | Every position redesigned | New backbones with no sequence to preserve |
-| `FIXED = "C22,C96"` | Those residues kept exactly | Disulfides, catalytic residues, binding hot spots |
-
-**Positions count from 1.** The letter is checked against your structure, so
-`C22` fails loudly if position 22 is not a cysteine — that catches numbering
-mistakes before you waste a run.
-
-**If function matters, fix the residues you know are important.** Fully
-unconstrained designs can recover a fold while losing the specific activity you
-care about — catalytic sites, disulfides, and interface positions are the usual
-ones to preserve.
-"""),
-
-    code("""
-# ============ EDIT THIS ============
-FIXED = ""            # e.g. "C22,C96,W47" to preserve those residues
-SOFT_PRIORS = ""      # e.g. "34:polar, 57:metal_binding" to nudge chemistry
-NUM_DESIGNS = 3       # how many different sequences to generate
-# ===================================
-
-if FIXED:
-    print(f"Keeping fixed: {FIXED}")
-else:
-    print("Redesigning every position (nothing held fixed)")
-
-if SOFT_PRIORS:
-    print(f"Chemistry preferences: {SOFT_PRIORS}")
-
-print(f"Generating {NUM_DESIGNS} design(s)")
-"""),
-
-    markdown("""
-**Which chemistry names can I use?** Run the cell below to list them.
-Details in `docs/soft_residue_priors.md`.
+Only needed if you are using the `CHEMISTRY` setting. Run this cell for the
+list. `docs/soft_residue_priors.md` explains the options in full.
 """),
 
     code("""
 from training.soft_priors import list_residue_classes
+
 print(list_residue_classes())
 """),
 
     markdown("""
----
-## 4. Generate the designs
+## Step 3 — Generate the designs
 
-Run this cell and wait. Each design takes 30 seconds to 5 minutes depending on
-protein size and whether you have a GPU.
-
-Each run is random, so the designs will differ from each other. That is intended
-— it gives you a panel of candidates rather than one guess.
+Run the cell below and wait. One design takes anywhere from under a minute to
+several minutes, depending on how large the protein is and whether you have a
+GPU. Progress is printed as each design finishes.
 """),
 
     code("""
-import subprocess, time
+import subprocess
+import time
 
-def build_command(output_dir):
-    cmd = [sys.executable, "training/inpainting.py",
-           "--pdb_input", STRUCTURE,
-           "--model", MODEL,
-           "--output-dir", output_dir]
-    if have_dataset:
-        cmd += ["--split_json", str(SPLIT_JSON), "--map_pkl", str(MAP_PKL)]
-    if FIXED:
-        cmd += ["--fixed-positions", FIXED]
+
+def build_command(output_dir, seed):
+    command = [
+        sys.executable, "training/inpainting.py",
+        "--pdb_input", STRUCTURE,
+        "--model", MODEL,
+        "--output-dir", output_dir,
+        "--seed", str(seed),
+    ]
+    if HAVE_DATASET:
+        command += ["--split_json", str(SPLIT_JSON), "--map_pkl", str(MAP_PKL)]
+    if KEEP:
+        command += ["--fixed-positions", KEEP]
     else:
-        # The sampler needs to be told what to design; 1.0 means everything.
-        cmd += ["--mask-ratio", "1.0"]
-    if SOFT_PRIORS:
-        cmd += ["--soft-priors", SOFT_PRIORS, "--prior-strength", "5.0"]
-    return cmd
+        # The sampler has to be told which positions to design. A mask ratio of
+        # 1.0 means all of them.
+        command += ["--mask-ratio", "1.0"]
+    if CHEMISTRY:
+        command += ["--soft-priors", CHEMISTRY, "--prior-strength", "5.0"]
+    return command
 
-successes = []
+
+completed = []
+
 for i in range(1, NUM_DESIGNS + 1):
     run_dir = f"{OUTPUT_DIR}_{i}" if NUM_DESIGNS > 1 else OUTPUT_DIR
-    print(f"[{i}/{NUM_DESIGNS}] designing -> {run_dir} ...", flush=True)
+    print(f"Design {i} of {NUM_DESIGNS} ... ", end="", flush=True)
+
     started = time.time()
-    result = subprocess.run(build_command(run_dir), capture_output=True, text=True)
+    result = subprocess.run(
+        build_command(run_dir, SEED + i - 1), capture_output=True, text=True
+    )
+    elapsed = time.time() - started
 
-    if result.returncode == 0:
-        successes.append(run_dir)
-        print(f"    done in {time.time() - started:.0f}s")
+    # Check for the results file rather than trusting the exit status, so a run
+    # that stopped early cannot be reported as a success.
+    if (Path(run_dir) / "inpainting_results.json").exists():
+        completed.append(run_dir)
+        print(f"done in {elapsed:.0f}s -> {run_dir}")
     else:
-        # Surface the real error rather than a stack trace.
-        tail = [l for l in result.stdout.split("\\n") + result.stderr.split("\\n")
-                if "Error" in l or "error" in l]
-        print(f"    FAILED: {tail[-1] if tail else 'see docs/GETTING_STARTED.md'}")
+        output = result.stdout.splitlines() + result.stderr.splitlines()
+        complaints = [line.strip() for line in output if "rror" in line]
+        print("did not finish")
+        print(f"  {complaints[-1] if complaints else 'No error message was printed.'}")
+        FAILED_OUTPUT = output  # kept so you can inspect it if you need to
 
-print(f"\\n{len(successes)} of {NUM_DESIGNS} design(s) completed.")
+print()
+print(f"{len(completed)} of {NUM_DESIGNS} design(s) finished.")
+if len(completed) < NUM_DESIGNS:
+    print("Troubleshooting is in docs/GETTING_STARTED.md. For the full output of")
+    print("the last failed run, print FAILED_OUTPUT.")
 """),
 
     markdown("""
----
-## 5. Read the results
+## Step 4 — Look at the results
 
-The raw output stores sequences as numbers. These helpers convert them into
-something you can actually use.
+The sampler writes sequences out as numbers. The next cell converts them into
+letters and prints a summary of each design.
 """),
 
     code("""
 from inversefolddir_tools import load_results
 
-designs = [load_results(d) for d in successes]
+designs = [load_results(d) for d in completed]
+
+if not designs:
+    print("There are no results to show, because no design finished in step 3.")
 
 for i, design in enumerate(designs, start=1):
-    print(f"{'=' * 60}\\nDESIGN {i}\\n{'=' * 60}")
+    print(f"Design {i}")
+    print("-" * 60)
     design.summary()
     print()
 """),
 
     markdown("""
-**Reading the numbers:**
+### What the summary is telling you
 
-- **Confidence** — how certain the model was, averaged across positions. Above
-  0.8 is typical. Individual positions below 0.5 are the model's weakest guesses.
-- **Identity** — similarity to the original sequence. 20–40% is normal for a full
-  redesign. The *fold* is preserved, not the sequence.
+**Length** is the number of residues in the backbone you gave it.
+
+**Redesigned** is how many of those positions the model was free to change. The
+rest are the ones you listed in `KEEP`.
+
+**Confidence** is how strongly the model preferred the residue it picked,
+averaged over the sequence, on a scale from 0 to 1. It reflects how constrained
+each position looked to the model. It is not a prediction that the protein will
+work.
+
+**Identity** is the percentage of positions where the design matches the
+sequence your structure came with. It only appears when the input had a
+sequence to compare against. A low value is not a problem in itself, since the
+backbone is what the design is built to fit, not the original sequence.
 """),
 
     markdown("""
-### What changed, position by position
+### Which positions changed
+
+Prints a position-by-position comparison of the first design against the
+sequence your structure came with. Change the index to look at a different
+design, or raise `limit` to see more rows.
+
+If the backbone has no sequence of its own, there is nothing to compare
+against, so this prints the designed sequence instead of a table.
 """),
 
     code("""
 from inversefolddir_tools import compare
 
 if designs:
-    compare(designs[0], limit=25)   # change the index to inspect another design
+    compare(designs[0], limit=25)
 """),
 
     markdown("""
-### Positions the model was unsure about
+### Positions the model was least sure about
 
-These are worth a second look. If any sit at a site you care about, consider
-adding them to `FIXED` above and re-running.
+These are worth a look. If any of them land on a residue you care about, add it
+to `KEEP` in step 2 and run the notebook again from there.
 """),
 
     code("""
@@ -311,57 +413,50 @@ from inversefolddir_tools import low_confidence_positions
 for i, design in enumerate(designs, start=1):
     uncertain = low_confidence_positions(design, threshold=0.5)
     if uncertain:
-        print(f"Design {i}: {len(uncertain)} uncertain position(s) -> {uncertain[:20]}")
+        print(f"Design {i}: {len(uncertain)} position(s) below 0.5 -> {uncertain[:20]}")
     else:
-        print(f"Design {i}: no low-confidence positions")
+        print(f"Design {i}: nothing below 0.5")
 """),
 
     markdown("""
----
-## 6. Export for ordering
+## Step 5 — Save the sequences
 
-Writes a FASTA file — the format synthesis services, BLAST, and alignment tools
-expect.
+Writes the designs to a FASTA file, which is the format sequence-ordering
+services and alignment tools expect.
 """),
 
     code("""
 from inversefolddir_tools import write_fasta
 
 if designs:
-    write_fasta(designs, f"{OUTPUT_NAME}.fasta", name=OUTPUT_NAME)
+    fasta_path = write_fasta(designs, f"{RUN_NAME}.fasta", name=RUN_NAME)
     print()
-    print(open(f"{OUTPUT_NAME}.fasta").read()[:400])
+    print(fasta_path.read_text())
 """),
 
     markdown("""
----
-## 7. Before you order — please read
+## Step 6 — Before you order anything
 
-The model says these sequences fit the backbone. It does **not** say they will
-express, fold, be soluble, or work.
+These sequences are the model's answer to one question: which residues suit
+this backbone. That is not the same as a protein that expresses, folds, stays
+soluble, or does its job. None of those are being predicted here.
 
-**Filter computationally first.** Fold each design with ESMFold or AlphaFold and
-compare to your input backbone. A TM-score above 0.9 means the design recovers
-the intended structure. This is the single most useful check you can run before
-spending money.
+So screen the designs on a computer before you spend money on any of them.
+Predict a structure for each sequence and compare it against the backbone you
+started from; the ones that disagree with the input are the cheapest to drop.
+Then order a panel rather than a single sequence, since some designs will not
+work out and you want enough candidates that this is survivable.
 
-**Order several.** Structural self-consistency does not guarantee expression,
-solubility, or function, so expect only a fraction of designs to work. Test a
-panel rather than one candidate.
+If a specific function has to survive the redesign, the most direct control you
+have over that is `KEEP`. Put the residues you know are essential in it.
 
-**Preserve what matters.** Fixing residues you know are important — catalytic
-sites, disulfides, interface positions — is the most direct way to retain a
-specific function.
+## Where to go next
 
----
-
-### Where to go next
-
-| I want to... | See |
+| If you want to | Read |
 |---|---|
-| Understand every option | `docs/GETTING_STARTED.md` |
-| Bias chemistry without fixing residues | `docs/soft_residue_priors.md` |
-| Run many structures at once | `example_scripts_for_prediction/batch_processing.sh` |
+| Understand every available option | `docs/GETTING_STARTED.md` |
+| Steer chemistry without fixing exact residues | `docs/soft_residue_priors.md` |
+| Run many structures in one go | `example_scripts_for_prediction/batch_processing.sh` |
 | Report a problem | <https://github.com/AlpTartici/inversefolddir/issues> |
 """),
 ]
@@ -383,7 +478,7 @@ def main():
     }
 
     output = Path(__file__).parent / "quickstart.ipynb"
-    output.write_text(json.dumps(notebook, indent=1))
+    output.write_text(json.dumps(notebook, indent=1) + "\n")
     print(f"Wrote {output} ({len(CELLS)} cells)")
 
 

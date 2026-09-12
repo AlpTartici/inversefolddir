@@ -1,21 +1,31 @@
-# Extras for the analysis notebooks. Not needed to design sequences.
+# Extras for running notebooks/quickstart.ipynb. Not needed to design
+# sequences from the command line.
 #
 #     pip install -r requirements-notebooks.txt
 #
-# Kept separate from requirements.txt because matplotlib depends on pillow,
-# which compiles from source when no prebuilt wheel matches your Python
-# version. pip installs atomically, so a pillow build failure would otherwise
-# block the core packages and leave you unable to run anything at all.
-#
-# If pillow fails here, either use a Python version with prebuilt wheels
-# (3.9-3.12 are well covered) or install the system image libraries:
-#     Debian/Ubuntu : sudo apt-get install libjpeg-dev zlib1g-dev
-#     macOS         : brew install jpeg zlib
-# Sequence design is unaffected either way.
+# Kept separate from requirements.txt so that a failure here can never block
+# the core design dependencies: pip installs atomically, so bundling the two
+# would let one broken build leave you unable to run anything at all.
 
 -r requirements.txt
 
-matplotlib>=3.4
 jupyter>=1.0
 jupyterlab>=3.0
 ipykernel>=6.0
+
+# ---------------------------------------------------------------------------
+# Plotting is deliberately NOT listed here. The quickstart notebook prints
+# tables and sequences, and does not plot anything, so matplotlib is not
+# needed to run it. It also pulls in pillow, which compiles from source when
+# no prebuilt wheel matches your Python version, which would make it the most
+# likely thing in this file to fail to install.
+#
+# Install it yourself if your own notebooks need it:
+#
+#     pip install matplotlib
+#
+# If pillow then fails to build, either use a Python version with prebuilt
+# wheels (3.9-3.12 are well covered), or install the system image libraries:
+#     Debian/Ubuntu : sudo apt-get install libjpeg-dev zlib1g-dev
+#     macOS         : brew install jpeg zlib
+# ---------------------------------------------------------------------------

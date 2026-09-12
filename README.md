@@ -10,7 +10,7 @@ one of these two — they assume no Python experience:**
 | Start here | What it is |
 |---|---|
 | **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** | Step-by-step guide: install, prepare input, run, read output, troubleshoot |
-| **[notebooks/quickstart.ipynb](notebooks/quickstart.ipynb)** | Same workflow as a notebook — edit two cells, run the rest |
+| **[notebooks/quickstart.ipynb](notebooks/quickstart.ipynb)** | Same workflow as a notebook — edit one cell, run the rest |
 | **[docs/INSTALL.md](docs/INSTALL.md)** | Platform notes (Linux/macOS/Windows, CPU or GPU) and install troubleshooting |
 
 Already installed? Check it with `python check_install.py`.
@@ -195,8 +195,8 @@ python inpainting.py --pdb_input 1abc --mask-positions "D45,Y67,K89"
 # Mask positions without validation
 python inpainting.py --pdb_input 1abc --mask-positions "45,67,89"
 
-# Template-based inpainting
-python inpainting.py --pdb_input 1abc --template-sequence "ACDEFXHIKLXNPQXSTVWY"
+# Template-based inpainting: X marks the positions to design
+python inpainting.py --pdb_input 1abc --template "ACDEFXHIKLXNPQXSTVWY"
 
 # Random masking
 python inpainting.py --pdb_input 1abc --mask-ratio 0.15
@@ -256,7 +256,7 @@ a restriction. Full reference: [docs/soft_residue_priors.md](docs/soft_residue_p
 ## Example Scripts
 
 Four runnable scripts live in `example_scripts_for_prediction/`. Each one sets
-its own paths at the top and can be run directly:
+its own paths at the top and can be run from any directory:
 
 | Script | What it does |
 |---|---|
@@ -266,9 +266,11 @@ its own paths at the top and can be run directly:
 | `batch_processing.sh` | Many protein/position combinations from a CSV in one run |
 
 ```bash
-cd example_scripts_for_prediction
-bash full_sampling.sh
+bash example_scripts_for_prediction/full_sampling.sh
 ```
+
+A relative output directory is resolved against wherever you ran the script,
+not against the script's own folder.
 
 They are deliberately not reproduced here: an inline copy drifts from the file
 it is quoting, and the flag spellings differ between the two entry points

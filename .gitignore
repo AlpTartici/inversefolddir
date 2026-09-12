@@ -51,8 +51,6 @@ venv/
 # --- Job scheduler leftovers ---
 slurm-*.out
 
-# --- OS / editor / agent ---
+# --- OS / editor ---
 .DS_Store
 *.swp
-.claude/
-CLAUDE.md

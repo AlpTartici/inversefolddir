@@ -5887,8 +5887,13 @@ def create_argument_parser():
                        help="Path to JSON config file containing default parameters. "
                             "Command-line arguments override config file values.")
 
+    # Resolved through paths.py rather than a relative "../ckpts/..." literal,
+    # which was only correct when sample.py was run from inside training/. It
+    # now points at the repository's ckpts/ from any working directory, and
+    # honours IFD_CKPT_DIR.
+    from paths import ckpt_path
     parser.add_argument('--model_path', type=str,
-                       default='../ckpts/inverse_folddir_model.pt',
+                       default=ckpt_path('inverse_folddir_model.pt'),
                        help="Path to the trained model checkpoint")
 
     # Direct PDB/structure input (bypasses dataset)

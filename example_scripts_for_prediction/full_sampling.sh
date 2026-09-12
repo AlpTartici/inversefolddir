@@ -8,6 +8,12 @@
 set -e  # Exit on any error
 set -u  # Exit on undefined variable
 
+# Resolve the repository root from this script's own location, so the paths
+# below work no matter which directory the script is invoked from. The working
+# directory is left alone, so a relative output directory still resolves
+# relative to wherever you ran this.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 # Configuration
 PDB_INPUT="${1:-1fcd.C}"           # PDB ID or file path (default: 1fcd.C)
 OUTPUT_DIR="${2:-./results/full_sampling}"  # Output directory
@@ -29,11 +35,11 @@ echo "============================================="
 mkdir -p "$OUTPUT_DIR"
 
 # Run full sequence sampling
-python ../training/sample.py \
+python "$REPO_ROOT"/training/sample.py \
     --pdb_input "$PDB_INPUT" \
     --steps "$STEPS" \
     --flow_temp "$FLOW_TEMP" \
-    --model_path "../ckpts/inverse_folddir_model.pt" \
+    --model_path "$REPO_ROOT/ckpts/inverse_folddir_model.pt" \
     --ensemble_size "$ENSEMBLE_SIZE" \
     --ensemble_consensus_strength 0.3 \
     --output_dir "$OUTPUT_DIR" \
