@@ -15,7 +15,6 @@ This file is published verbatim as README.md of the Hugging Face model
 repository. The YAML front matter above must stay first: HF parses it for the
 license badge, tags, and search filters.
 
-Replace the Citation section with the paper once it has a DOI or arXiv ID.
 -->
 
 # Inverse FoldDir
@@ -264,7 +263,22 @@ rather than plain tensors.
 
 ## Citation
 
-The accompanying paper is not out yet. Until it is, cite the software:
+If you use this model, please cite the preprint:
+
+```bibtex
+@article{tartici2026inversefolddir,
+  title   = {Inverse FoldDir: Structure-conditioned Protein Sequence Design
+             by Dirichlet Flow Matching},
+  author  = {Tartici, Alp and Stojkovic, Mihajlo and Tian, Anru and
+             Jewett, Michael C. and Altman, Russ B. and Wittmann, Bruce J.},
+  journal = {bioRxiv},
+  year    = {2026},
+  doi     = {10.64898/2026.09.06.749733},
+  url     = {https://www.biorxiv.org/content/10.64898/2026.09.06.749733v2}
+}
+```
+
+To cite this implementation specifically, rather than the method:
 
 ```bibtex
 @software{inversefolddir,

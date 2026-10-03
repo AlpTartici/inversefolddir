@@ -2,6 +2,10 @@
 
 A generative protein sequence design framework using **Dirichlet Flow Matching (DFM)** for structure-conditioned sequence generation. This repository implements deep generative models that learn to predict amino acid sequences from protein backbone structures.
 
+**Preprint:** [Inverse FoldDir: Structure-conditioned Protein Sequence Design by
+Dirichlet Flow Matching](https://www.biorxiv.org/content/10.64898/2026.09.06.749733v2)
+(bioRxiv, 2026)
+
 ## New here?
 
 **If you are a bench scientist and mainly want sequences to order, start with
@@ -668,7 +672,22 @@ if 'args' in checkpoint:
 
 ## Citation
 
-The accompanying paper is not out yet. Until it is, cite the software:
+If you use this work, please cite the preprint:
+
+```bibtex
+@article{tartici2026inversefolddir,
+  title   = {Inverse FoldDir: Structure-conditioned Protein Sequence Design
+             by Dirichlet Flow Matching},
+  author  = {Tartici, Alp and Stojkovic, Mihajlo and Tian, Anru and
+             Jewett, Michael C. and Altman, Russ B. and Wittmann, Bruce J.},
+  journal = {bioRxiv},
+  year    = {2026},
+  doi     = {10.64898/2026.09.06.749733},
+  url     = {https://www.biorxiv.org/content/10.64898/2026.09.06.749733v2}
+}
+```
+
+To cite this implementation specifically, rather than the method:
 
 ```bibtex
 @software{inversefolddir,
@@ -681,10 +700,6 @@ The accompanying paper is not out yet. Until it is, cite the software:
             https://huggingface.co/AlpTartici/inversefolddir}
 }
 ```
-
-A paper citation will replace this once the preprint is posted. If you are
-reading this after that point and the block still says "not out yet", please
-open an issue -- it means this file went stale.
 
 ---
 
